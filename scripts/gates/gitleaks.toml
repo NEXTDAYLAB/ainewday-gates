@@ -1,0 +1,70 @@
+# Cấu hình gitleaks CẤP CÔNG TY — dùng bởi cổng secret-scan của chuỗi gate-chain (LUAT §5 L2, BH-011, BH-037).
+# Bộ luật mặc định của gitleaks + luật cho cách người Việt ghi bí mật.
+# Khái quát từ một dự án nội bộ .gitleaks.toml (luật mặc định của gitleaks bỏ lọt mật khẩu ghi theo kiểu tiếng Việt).
+# Repo dự án có .gitleaks.toml riêng ⇒ cổng chạy THÊM một lượt với cấu hình đó (không thay cấu hình này).
+# Báo nhầm ở một repo ⇒ thêm vân tay (fingerprint) vào .gitleaksignore ở gốc repo đó, kèm lý do trong PR.
+title = "ainewday-company"
+
+[extend]
+useDefault = true
+
+# Luật 1 — mật khẩu trong dấu nháy ngược cạnh nhãn (cả dạng bảng): "| **Mật khẩu sudo** | `Abc...` |", "password `...`".
+[[rules]]
+id = "vi-password-backtick"
+description = "Mật khẩu trong dấu nháy ngược cạnh nhãn tiếng Việt/Anh"
+regex = '''(?i)(mật\s?khẩu|mat\s?khau|matkhau|mat_khau|\bpassword\b|\bpasswd\b|\bpass\b|khoá\s?bí\s?mật|khoa\s?bi\s?mat)[^`\n]{0,25}`([A-Za-z0-9!@#$%^&*_+=.\-]{8,})`'''
+secretGroup = 2
+entropy = 2.5
+keywords = ["mật khẩu", "mat khau", "matkhau", "mat_khau", "pass", "khoá bí mật", "khoa bi mat"]
+
+# Luật 2 — mật khẩu sau dấu ":" hoặc "=" (trần hoặc trong nháy ngược): "matkhau: Abc-123-...", "pass = ...".
+[[rules]]
+id = "vi-password-colon"
+description = "Mật khẩu sau nhãn tiếng Việt/Anh và dấu : hoặc ="
+regex = '''(?i)(mật\s?khẩu|mat\s?khau|matkhau|mat_khau|\bpassword\b|\bpasswd\b|\bpass\b)[^:=\n`|.;,]{0,20}[:=]\s*[*]{0,2}\s*`?([A-Za-z0-9!@#$%^&*_+=.\-]{8,})'''
+secretGroup = 2
+entropy = 3.0
+keywords = ["mật khẩu", "mat khau", "matkhau", "mat_khau", "pass"]
+
+# Luật 3 — khoá / token / bí mật sau dấu ":" hoặc "=": "Khoá API: `...`", "token = ...".
+# "khoá" tiếng Việt còn nghĩa là "lock" (loại cổng) và "key" (định danh) ⇒ chỉ bắt khi có dấu ":"/"=", và bỏ qua giá trị dạng
+# slug chữ thường-gạch nối (`m01-ho-so`). Đo trên handbook 26/10/2026: bản đầu (bắt "khoá … `x`" không cần dấu ":") báo nhầm 12 chỗ.
+[[rules]]
+id = "vi-key-colon"
+description = "Khoá/token/bí mật sau nhãn tiếng Việt/Anh và dấu : hoặc ="
+regex = '''(?i)(khoá|khóa|\bkhoa\b|bí\s?mật|\bbi\s?mat\b|\btoken\b)[^:=\n`|.;,]{0,20}[:=]\s*[*]{0,2}\s*`?([A-Za-z0-9!@#$%^&*_+=.\-]{8,})'''
+secretGroup = 2
+entropy = 3.0
+keywords = ["khoá", "khóa", "khoa", "bí mật", "bi mat", "token"]
+
+[[rules.allowlists]]
+description = "Định danh dạng slug (khoá kịch bản, mã dự án) — không phải bí mật"
+regexTarget = "secret"
+regexes = ['''^[a-z0-9]+(-[a-z0-9]+)*$''']
+
+# Chỗ giữ chỗ / tên biến / tên thuật toán — không phải bí mật (áp cho cả ba luật tiếng Việt).
+[[allowlists]]
+description = "Tên thuật toán, tên biến môi trường, chỗ giữ chỗ trong tài liệu"
+targetRules = ["vi-password-backtick", "vi-password-colon", "vi-key-colon"]
+regexTarget = "secret"
+regexes = [
+  '''(?i)^(argon2(id)?|bcrypt|scrypt|pbkdf2|sha(256|512)|hmac.*)$''',
+  '''^[A-Z][A-Z0-9_]{3,}$''',
+  '''(?i)(thay[-_]?bang|placeholder|example|changeme|your[-_]|xxx+|\*{3,}|\.{3,}|<[^>]+>)''',
+  '''(?i)^\$\{?[A-Za-z_]''',
+]
+
+# Đường dẫn bỏ qua. Mọi đường dẫn ở đây dựa trên giả định "nằm ngoài git" hoặc "là fixture cố ý";
+# cổng secret-scan tự khẳng định .env không bị git theo dõi (allowlist không có phép khẳng định là điểm mù — án lệ nội bộ).
+[[allowlists]]
+description = "Fixture cổng quét bí mật (khoá GIẢ cố ý) + thư mục build/cache + .env ngoài git"
+paths = [
+  '''(^|/)scripts/(gates/)?fixtures/(secret-scan|gitleaks)/''',
+  '''(^|/)\.env(\.[A-Za-z0-9_-]+)?$''',
+  '''(^|/)node_modules/''',
+  '''(^|/)target/''',
+  '''(^|/)dist/''',
+  '''(^|/)\.next/''',
+  '''(^|/)\.turbo/''',
+  '''(^|/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|Cargo\.lock)$''',
+]

@@ -1,0 +1,13 @@
+name: ci
+on: [pull_request]
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache
+          key: c-${{ hashFiles('**/package-lock.json') }}
+      - name: Cổng
+        run: bash scripts/gates-quick.sh

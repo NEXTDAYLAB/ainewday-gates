@@ -1,0 +1,5 @@
+# Báo nhầm của gitleaks đã xét tay (cổng secret-scan) — mỗi dòng một vân tay, kèm lý do ở dòng chú thích ngay trên.
+# assets/icons/material-symbols-outlined.json: bảng mã điểm của bộ icon Material Symbols (tên icon → mã Unicode),
+# luật mặc định generic-api-key nhầm "switch_access_3": "…" là khoá API. Đo 26/10/2026: 4 chỗ, cùng dòng 1.
+assets/icons/material-symbols-outlined.json:generic-api-key:1
+dbfa3873ecf43b3382afebc8d3560f601fbd3fe1:assets/icons/material-symbols-outlined.json:generic-api-key:1

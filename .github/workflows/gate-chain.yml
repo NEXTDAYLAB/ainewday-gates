@@ -1,0 +1,100 @@
+name: gate-chain
+# Chuỗi cổng dùng chung của AI NewDay. Repo dự án gọi MỘT job:
+#
+#   jobs:
+#     gate-chain:
+#       uses: NEXTDAYLAB/ainewday-gates/.github/workflows/gate-chain.yml@main
+#       with:
+#         po-name: "<tên người duyệt tech stack>"   # tuỳ chọn — cổng tech-stack-approved đòi đúng tên này
+#
+# Cổng chạy: xem scripts/gates/run-all.sh (danh sách duy nhất). Mã 0 đạt · 1 vi phạm · 2 BROKEN — cả 1 và 2 đều làm job ĐỎ.
+# Thiếu công cụ / không lấy được bộ cổng ⇒ ĐỎ, không bao giờ "0 vi phạm". Không có `if:` nào bao bước chạy cổng.
+on:
+  workflow_call:
+    inputs:
+      gates-ref:
+        description: "Ref của ainewday-gates (nhánh, tag hoặc SHA). Nên ghim tag khi đã có."
+        type: string
+        default: main
+      po-name:
+        description: "Tên người duyệt tech stack mà ADR-000 phải ghi. Trống = chấp nhận mọi tên đã điền"
+        type: string
+        default: ""
+      gate-dir:
+        description: "Thư mục cổng riêng của repo (check-*.sh, fixtures/, gates.lock)"
+        type: string
+        default: scripts
+      registry:
+        description: "Sổ cổng của repo"
+        type: string
+        default: docs/GATES.md
+      pitfalls:
+        description: "Sổ án lệ của repo"
+        type: string
+        default: docs/PITFALLS.md
+      runners:
+        description: "Tệp runner gọi cổng riêng (glob, cách nhau bởi dấu cách). Rỗng = mặc định của gate-is-invoked"
+        type: string
+        default: ""
+      skip:
+        description: "Cổng không áp cho repo (cách nhau bởi dấu cách) — mỗi tên PHẢI có dòng N/A + lý do trong sổ cổng"
+        type: string
+        default: ""
+permissions:
+  contents: read
+jobs:
+  gate-chain:
+    name: gate-chain
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: "8.30.1"
+      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+    steps:
+      - name: Lấy mã repo (đủ lịch sử — secret-scan quét lịch sử, gate-not-removed so nhánh gốc)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Lấy bộ cổng từ ainewday-gates (kho công khai — không cần token)
+        uses: actions/checkout@v4
+        with:
+          repository: NEXTDAYLAB/ainewday-gates
+          ref: ${{ inputs.gates-ref }}
+          path: .gate-chain-src
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Đưa bộ cổng ra ngoài cây làm việc (không lẫn vào tệp của repo bị quét)
+        run: |
+          set -euo pipefail
+          mv .gate-chain-src "$RUNNER_TEMP/gate-chain"
+          test -f "$RUNNER_TEMP/gate-chain/scripts/gates/run-all.sh" || { echo "::error::bộ cổng thiếu scripts/gates/run-all.sh (ref ${{ inputs.gates-ref }})"; exit 2; }
+      - name: Cài gitleaks ${{ env.GITLEAKS_VERSION }} (kiểm SHA-256)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/gitleaks.tgz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gitleaks.tgz" -C "$RUNNER_TEMP/bin" gitleaks
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Chạy chuỗi cổng
+        env:
+          GATE_DIR: ${{ inputs.gate-dir }}
+          GATE_REGISTRY: ${{ inputs.registry }}
+          GATE_PITFALLS: ${{ inputs.pitfalls }}
+          GATE_RUNNERS_INPUT: ${{ inputs.runners }}
+          GATE_SKIP: ${{ inputs.skip }}
+          GATE_PO_NAME: ${{ inputs.po-name }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.base_ref }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          set -uo pipefail
+          [ -n "$GATE_RUNNERS_INPUT" ] && export GATE_RUNNERS="$GATE_RUNNERS_INPUT"
+          # Nhánh gốc để gate-not-removed so: PR ⇒ nhánh đích; push ⇒ commit trước lượt đẩy; không có ⇒ commit cha.
+          if [ "$EVENT_NAME" = pull_request ] && [ -n "$PR_BASE" ]; then base="origin/$PR_BASE"
+          elif [ -n "$PUSH_BEFORE" ] && [ "$PUSH_BEFORE" != 0000000000000000000000000000000000000000 ] && git cat-file -e "$PUSH_BEFORE^{commit}" 2>/dev/null; then base="$PUSH_BEFORE"
+          elif git rev-parse -q --verify HEAD~1 >/dev/null; then base="HEAD~1"
+          else base="HEAD"; fi
+          echo "Nhánh gốc để so: $base"
+          bash "$RUNNER_TEMP/gate-chain/scripts/gates/run-all.sh" --base "$base"

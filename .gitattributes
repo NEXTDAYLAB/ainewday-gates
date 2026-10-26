@@ -1,0 +1,9 @@
+# Ép LF cho mọi tệp văn bản — script .sh mang CRLF là hỏng trên runner Linux (LUAT §5 L10, BH-031).
+# Cổng scripts-lf-executable đỏ khi thiếu dòng đầu tiên.
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.pdf binary
