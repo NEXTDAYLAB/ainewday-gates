@@ -23,6 +23,7 @@ pitfall-has-gate
 tech-stack-approved
 scripts-lf-executable
 secret-scan
+ui-vn-conventions
 "
 GATE_CHAIN_GATES="$(printf '%s' "$GATES" | tr '\n' ' ')"
 export GATE_CHAIN_GATES

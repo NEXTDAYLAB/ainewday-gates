@@ -13,3 +13,4 @@
 | `tech-stack-approved` | — | lock | — | — | S0-D1 | N/A — fixture thử runner |
 | `scripts-lf-executable` | — | lock | — | — | S0-D1 | N/A — fixture thử runner |
 | `secret-scan` | — | lock | — | — | S0-D1 | N/A — fixture thử runner |
+| `ui-vn-conventions` | — | lock | — | — | S0-D1 | N/A — fixture thử runner |

@@ -1,0 +1,2 @@
+# Màn kỹ thuật không dành cho người dùng nghiệp vụ
+^tools/dev-console/  # bảng điều khiển API cho dev — cần xem mã lỗi máy chủ nguyên văn
