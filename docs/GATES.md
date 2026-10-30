@@ -26,11 +26,12 @@
 | `tech-stack-approved` | Có mã ứng dụng ⇒ ADR-000 có `Duyệt:`/`Miễn trình: <người duyệt>` (+ `tech-stack.html` khi Duyệt) | lock | LUAT L8 · BH-007, BH-033 | ADR-000 tự ghi Accepted, `Duyệt: PO <ngày>` chưa điền | Đ0 | ✅ |
 | `scripts-lf-executable` | `.gitattributes` ép LF; `.sh` không CR trong index, mode 100755 | lock | LUAT L10 · BH-031 | thiếu `.gitattributes`, `.sh` CRLF + 100644 | Đ0 | ✅ |
 | `ui-vn-conventions` | Tệp giao diện (.tsx .jsx .vue .svelte .astro .html, ngoài test/build) theo Quy ước giao diện người dùng VN luật 1–4: không ô số/ngày gốc ngoài thành phần chung, không mã máy/`{x.key}`/`{err.code}` hiện ra, không giới hạn máy, không ngày kiểu Mỹ; ngoại lệ `ui-vn-ok: <lý do>` / `.ui-vn-ignore` phải có lý do | lock | handbook `standards/UI_VN.md` · LUAT L11 · BH-048 | `type="number"`, `inputMode="decimal"`, `{p.key}`, `Đối tượng: {p.id}`, `COUNT_DEFAULT_DEADLINE_DAYS` giữa thẻ, `MAX_SAFE_INTEGER` hiện ra, `9.007.199.254.740.991`, `type="date"`, `toLocaleDateString()`, `MM/dd/yyyy`, `ui-vn-ok:` trống, `.ui-vn-ignore` thiếu lý do | Đ0 | ✅ |
+| `mockup-logo-goc` | Khách có `docs/brand/logo/` ⇒ `docs/mockup/index.html` nhúng logo gốc (`data:image/` cạnh chữ `logo`), không giữ ô chữ viết tắt của khung | lock | skill `ainewday-mockup-standard` luật 15 · EHB-SM 30/10/2026 | `BRAND.logo:''` + ô chữ `KH` khi đã có `docs/brand/logo/` | Đ0 | ✅ |
 | `secret-scan` | Không bí mật trong lịch sử + cây làm việc; bắt cách ghi tiếng Việt | camera | LUAT L2 · BH-011, BH-037 · án lệ nội bộ | `matkhau:` trần, `Mật khẩu sudo` trong bảng, `Khoá API` nháy ngược, `pass =` — giá trị GIẢ | Đ0 | ✅ |
 
 Giới hạn đã biết (camera): `secret-scan` — bí mật viết khác mẫu (không nhãn, nhãn lạ, entropy thấp) lọt; `pitfall-has-gate` — chỉ kiểm có dòng,
 không kiểm cổng ghi trong dòng có thật; `tech-stack-approved` — đọc chữ, không biết ai gõ dòng "Duyệt" (lớp chặn là review PR có ADR-000);
-`gate-three-states` — kiểm script có dùng thư viện, không chạy thử từng script.
+`gate-three-states` — kiểm script có dùng thư viện, không chạy thử từng script; `mockup-logo-goc` — không so ảnh nhúng có đúng tệp trong `docs/brand/logo/`.
 
 ## Gia hạn (PO duyệt)
 

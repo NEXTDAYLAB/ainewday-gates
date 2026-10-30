@@ -24,6 +24,7 @@ tech-stack-approved
 scripts-lf-executable
 secret-scan
 ui-vn-conventions
+mockup-logo-goc
 "
 GATE_CHAIN_GATES="$(printf '%s' "$GATES" | tr '\n' ' ')"
 export GATE_CHAIN_GATES
