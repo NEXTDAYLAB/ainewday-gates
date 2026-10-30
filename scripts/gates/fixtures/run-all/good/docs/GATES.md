@@ -14,3 +14,4 @@
 | `scripts-lf-executable` | — | lock | — | — | S0-D1 | N/A — fixture thử runner |
 | `secret-scan` | — | lock | — | — | S0-D1 | N/A — fixture thử runner |
 | `ui-vn-conventions` | — | lock | — | — | S0-D1 | N/A — fixture thử runner |
+| `mockup-logo-goc` | — | lock | — | — | S0-D1 | N/A — fixture thử runner |
