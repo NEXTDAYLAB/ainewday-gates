@@ -15,6 +15,9 @@
 #   - Tệp THÀNH PHẦN CHUNG mang dấu `ui-vn: thanh-phan-chung` (chú thích bất kỳ) ⇒ bỏ luật 1 và 4 cho tệp đó (nó chính là nơi bọc ô gốc).
 #   - Một dòng mang `ui-vn-ok: <lý do>` (lý do không rỗng) ⇒ bỏ dòng đó, in ra để Reviewer thấy. `ui-vn-ok:` trống lý do ⇒ vi phạm.
 #   - Tệp `.ui-vn-ignore` ở gốc repo: màn kỹ thuật (công cụ dev) — mỗi dòng `<biểu thức đường dẫn>  # <lý do>`; thiếu lý do ⇒ vi phạm.
+# Phạm vi (anh Châu quyết 31/10/2026, chat, phương án 2a): tệp `.ui-vn-pham-vi` ở gốc repo, dòng đầu `dong-moi  # <lý do>`
+#   (hoặc biến GATE_UI_VN_PHAM_VI) ⇒ ở chế độ repo chỉ báo dòng THÊM/SỬA so với nhánh gốc (--base); mã cũ là nợ, sửa khi chạm màn.
+#   Thiếu lý do ⇒ vi phạm. Mặc định toan-bo (repo mới, EHB-SM). Chế độ fixture luôn toan-bo.
 # Giới hạn (ghi trong sổ): đọc chữ trong mã, không chạy giao diện — mã máy lấy từ dữ liệu lúc chạy (key tham số từ API) chỉ bắt được bằng
 # bài e2e quét chữ trên màn (handbook templates/ui-vn/machine-codes.ts).
 source "$(dirname "$0")/lib/gate.sh" || exit 2  # thư viện vắng mặt ⇒ BROKEN, không chạy tiếp
@@ -58,6 +61,21 @@ EOF
 )"
 
 tmp="$(mktemp -d)"; trap 'rm -rf "$GATE_VFILE" "$tmp"' EXIT
+pham_vi="${GATE_UI_VN_PHAM_VI:-}"
+if [ -z "$pham_vi" ] && [ -f .ui-vn-pham-vi ] && gate_repo_mode; then
+  l="$(head -1 .ui-vn-pham-vi | tr -d '')"; pham_vi="$(printf '%s' "${l%%#*}" | tr -d '[:space:]')"
+  case "$l" in *'#'*[![:space:]]*) gate_note ".ui-vn-pham-vi: $l" ;; *) gate_violation ".ui-vn-pham-vi — thiếu '# lý do': $l" ;; esac
+fi
+pham_vi="${pham_vi:-toan-bo}"
+case "$pham_vi" in toan-bo|dong-moi) ;; *) gate_broken "GATE_UI_VN_PHAM_VI='$pham_vi' — chỉ nhận toan-bo | dong-moi" ;; esac
+if [ "$pham_vi" = dong-moi ] && gate_repo_mode; then
+  git rev-parse -q --verify "$GATE_BASE_REF^{commit}" >/dev/null || gate_broken "dong-moi cần nhánh gốc '$GATE_BASE_REF' (thiếu lịch sử? fetch-depth: 0)"
+  # Dòng thêm/sửa: "tệp:số_dòng" theo phía mới của diff (-U0).
+  git diff -U0 --no-color "$GATE_BASE_REF" -- . | awk '
+    /^\+\+\+ b\//{f=substr($0,7); next}
+    /^@@/{ split($3,a,","); st=substr(a[1],2)+0; n=(a[2]=="")?1:a[2]+0; for(i=0;i<n;i++) print f":"(st+i) }' > "$tmp/moi"
+  gate_note "phạm vi dong-moi: chỉ dòng thêm/sửa so với $GATE_BASE_REF ($(wc -l < "$tmp/moi" | tr -d ' ') dòng)"
+fi
 printf '%s\n' "$files" > "$tmp/all"
 # Tệp thành phần chung (bỏ luật 1, 4 cho tệp đó). Mỗi luật chạy MỘT grep trên cả danh sách (nhanh cả trên Windows).
 tr '\n' '\0' < "$tmp/all" | xargs -0 grep -l 'ui-vn: thanh-phan-chung' | LC_ALL=C sort > "$tmp/shared"
@@ -76,9 +94,11 @@ printf '%s\n' "$rules" | while IFS= read -r rule; do
         [ -n "$reason" ] && printf '%s:%s — %s\n' "$f" "$line" "$reason" >> "$tmp/ok"
         continue ;;
     esac
+    if [ -f "$tmp/moi" ] && ! grep -qxF -- "$f:$line" "$tmp/moi"; then echo x >> "$tmp/cu"; continue; fi
     gate_violation "$f:$line — $label: $(printf '%s' "$text" | sed -E 's/^[[:space:]]+//' | cut -c1-120)"
   done
 done
+[ -s "$tmp/cu" ] && gate_note "nợ cũ (ngoài dòng thêm/sửa, không chặn): $(wc -l < "$tmp/cu" | tr -d ' ') chỗ"
 # ui-vn-ok: trống lý do ở BẤT KỲ dòng nào ⇒ vi phạm — ngoại lệ phải thành văn.
 tr '\n' '\0' < "$tmp/all" | xargs -0 grep -nHE 'ui-vn-ok:[[:space:]]*($|\*/|-->|[}])' 2>/dev/null | while IFS= read -r hit; do
   f="${hit%%:*}"; rest2="${hit#*:}"
