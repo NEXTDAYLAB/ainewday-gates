@@ -40,7 +40,6 @@ jobs:
       gates-ref: ${{ github.event.pull_request.head.sha || github.sha }}
       gate-dir: scripts/gates
       runners: scripts/gates/run-all.sh
-      skip: pitfall-has-gate
 
   gate-chain-selftest:
     name: gate-chain-selftest
