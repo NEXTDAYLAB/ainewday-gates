@@ -2,8 +2,11 @@
 # Runner của chuỗi gate-chain — chạy MỌI cổng dùng chung trên repo hiện tại (thư mục làm việc = gốc repo gọi).
 # Workflow .github/workflows/gate-chain.yml gọi ĐÚNG tệp này; trên máy: bash <handbook>/scripts/gates/run-all.sh
 #
-# DANH SÁCH DƯỚI ĐÂY LÀ NƠI DUY NHẤT CỔNG DÙNG CHUNG ĐƯỢC CHẠY (cổng gate-is-invoked đối chiếu từng dòng).
-# Thêm cổng = thêm script check-<tên>.sh + ca kiểm âm fixtures/<tên>/{bad,good} + một dòng ở đây.
+# DANH SÁCH DƯỚI ĐÂY LÀ NƠI DUY NHẤT CỔNG DÙNG CHUNG ĐƯỢC CHẠY. Chỉ giữ CỔNG THẬT (chặn lỗi sản phẩm/bảo mật).
+# Anh Châu quyết 03/11/2026 (chat) — dọn luật: gỡ 8 cổng sổ sách khỏi chuỗi (gate-three-states, gate-has-negative-case,
+# gate-is-invoked, gate-not-removed, gate-registry-in-sync, gate-not-overdue, doc-ids-unique, pitfall-has-gate).
+# Script của chúng vẫn nằm trong thư mục này làm THƯ VIỆN THAM KHẢO (vẫn có ca kiểm âm trong test-gates.sh) — không chạy trong chuỗi.
+# Thêm cổng = bỏ một cổng (chống phình, handbook LUAT.md mục C) + script check-<tên>.sh + fixtures/<tên>/{bad,good} + một dòng ở đây.
 #
 # Biến:  GATE_SKIP="tên1 tên2"   cổng không áp cho repo — mỗi tên PHẢI có dòng trong sổ cổng ghi N/A + lý do,
 #                                 nếu không thì tính là vi phạm (bỏ qua phải thành văn — GATES template luật 4).
@@ -12,14 +15,6 @@
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GATES="
-gate-three-states
-gate-has-negative-case
-gate-is-invoked
-gate-not-removed
-gate-registry-in-sync
-gate-not-overdue
-doc-ids-unique
-pitfall-has-gate
 tech-stack-approved
 scripts-lf-executable
 secret-scan
