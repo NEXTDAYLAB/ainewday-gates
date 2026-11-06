@@ -58,6 +58,25 @@ done
 # Git Bash (Windows): ln -s thành bản sao .exe, cần DLL msys đi kèm mới chạy được.
 for dll in /usr/bin/msys-*.dll; do [ -f "$dll" ] && cp "$dll" "$minpath/" 2>/dev/null; done
 cases=$((cases + 1))
+# secret-scan chế độ repo — phạm vi lịch sử (06/11/2026): bí mật ở NHÁNH KHÁC không làm đỏ PR; bí mật trong commit của PR (kể cả đã xoá ở commit sau) vẫn đỏ.
+if command -v gitleaks >/dev/null 2>&1; then
+  ss_repo() { # in ra đường dẫn repo tạm: main sạch · nhánh khac có bí mật · nhánh pr ($1 = co|khong bí mật trong PR, đã xoá ở commit sau)
+    local r; r="$(mktemp -d)"; ( cd "$r" && git init -q -b main && git config user.email t@t && git config user.name t
+      mkdir docs && echo "# sạch" > docs/a.md && git add . && git commit -qm goc
+      git checkout -qb khac && echo "matkhau: GIA-123-KHONG-PHAI-THAT" > docs/b.md && git add . && git commit -qm khac
+      git checkout -q main && git checkout -qb pr
+      if [ "$1" = co ]; then echo "matkhau: GIA-456-KHONG-PHAI-THAT" > docs/c.md && git add . && git commit -qm lo && git rm -q docs/c.md && git commit -qm xoa; fi
+      echo "# pr" > docs/d.md && git add . && git commit -qm pr ) >/dev/null 2>&1; printf '%s' "$r"; }
+  ss_case() { # $1 mô tả, $2 co|khong, $3 mã cần, còn lại = env
+    local d="$1" k="$2" want="$3" r rc; shift 3; r="$(ss_repo "$k")"; cases=$((cases + 1))
+    ( cd "$r" && env "$@" bash "$HERE/check-secret-scan.sh" --base main >/dev/null 2>&1 ); rc=$?; rm -rf "$r"
+    if [ "$rc" -eq "$want" ]; then printf 'v %-24s %s: mã %s đúng
+' secret-scan "$d" "$rc"; else printf 'x %-24s %s: mã %s, cần %s
+' secret-scan "$d" "$rc" "$want"; fail=1; fi; }
+  ss_case "bí mật chỉ ở nhánh khác, PR sạch" khong 0 GATE_SECRET_FULL=0
+  ss_case "bí mật trong commit PR (đã xoá sau)" co 1 GATE_SECRET_FULL=0
+  ss_case "GATE_SECRET_FULL=1 quét mọi nhánh" khong 1 GATE_SECRET_FULL=1
+fi
 out="$(PATH="$minpath" "$BASH" "$HERE/check-secret-scan.sh" --root "$HERE/fixtures/secret-scan/good" 2>&1)"; rc=$?
 # Phải BROKEN ĐÚNG LÝ DO (thiếu gitleaks) — không phải vì thiếu công cụ lõi hay thư viện.
 if [ "$rc" -eq 2 ] && printf '%s' "$out" | grep -q "thiếu công cụ 'gitleaks'"; then printf 'v %-24s thiếu gitleaks ⇒ BROKEN (2), đúng lý do\n' secret-scan
