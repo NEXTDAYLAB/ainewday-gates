@@ -36,7 +36,7 @@
 | `mockup-logo-goc` | Khách có `docs/brand/logo/` ⇒ `docs/mockup/index.html` nhúng logo gốc (`data:image/` cạnh chữ `logo`), không giữ ô chữ viết tắt của khung | lock | skill `ainewday-mockup-standard` luật 15 · EHB-SM 30/10/2026 | `BRAND.logo:''` + ô chữ `KH` khi đã có `docs/brand/logo/` | Đ0 | ✅ |
 | `secret-scan` | Không bí mật trong lịch sử + cây làm việc; bắt cách ghi tiếng Việt. Lịch sử: PR/push chỉ quét commit của lượt đó (`<gốc>..HEAD`); `GATE_SECRET_FULL=1` quét mọi nhánh (lượt định kỳ) | camera | LUAT L2 · BH-011, BH-037 · án lệ nội bộ | `matkhau:` trần, `Mật khẩu sudo` trong bảng, `Khoá API` nháy ngược, `pass =` — giá trị GIẢ | Đ0 | ✅ |
 
-Giới hạn đã biết (camera): `secret-scan` — bí mật viết khác mẫu (không nhãn, nhãn lạ, entropy thấp) lọt; `pitfall-has-gate` — chỉ kiểm có dòng,
+Giới hạn đã biết (camera): `secret-scan` — bí mật viết khác mẫu (không nhãn, nhãn lạ, entropy thấp) lọt; giá trị CHỈ CHỮ có dạng định danh (`Lớp.thuộcTính`, camelCase/PascalCase/snake_case, tên tệp, `TEN_BIEN`) cạnh chữ "mật khẩu" được bỏ qua — có chữ số/ký hiệu là bị bắt (10/11/2026, anh Châu quyết (chat): gỡ bắt nhầm EHB-SM/EH-AMS; mỗi mẫu bỏ qua có ca đỏ cùng ngữ cảnh trong `fixtures/secret-scan/bad.expect`); `pitfall-has-gate` — chỉ kiểm có dòng,
 không kiểm cổng ghi trong dòng có thật; `tech-stack-approved` — đọc chữ, không biết ai gõ dòng "Duyệt" (lớp chặn là review PR có ADR-000);
 `gate-three-states` — kiểm script có dùng thư viện, không chạy thử từng script; `mockup-logo-goc` — không so ảnh nhúng có đúng tệp trong `docs/brand/logo/`.
 

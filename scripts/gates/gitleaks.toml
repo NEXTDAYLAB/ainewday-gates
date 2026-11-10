@@ -55,16 +55,70 @@ regexTarget = "secret"
 regexes = ['''^[a-z0-9]+(-[a-z0-9]+)*$''']
 
 # Chỗ giữ chỗ / tên biến / tên thuật toán — không phải bí mật (áp cho cả ba luật tiếng Việt).
+# ⚠️ gitleaks GỘP các mẫu trong một allowlist thành MỘT biểu thức bằng "|": cờ "(?i)" đặt đầu một mẫu sẽ LAN sang mọi mẫu sau
+# (đo 10/11/2026: `^[A-Z][A-Z0-9_]{3,}$` thành không phân biệt hoa thường ⇒ mật khẩu chỉ chữ+số như matkhau: Abc9... LỌT).
+# ⇒ chỉ dùng cờ có phạm vi "(?i:...)", không bao giờ "(?i)" trần trong allowlist.
 [[allowlists]]
 description = "Tên thuật toán, tên biến môi trường, chỗ giữ chỗ trong tài liệu"
 targetRules = ["vi-password-backtick", "vi-password-colon", "vi-key-colon"]
 regexTarget = "secret"
 regexes = [
-  '''(?i)^(argon2(id)?|bcrypt|scrypt|pbkdf2|sha(256|512)|hmac.*)$''',
-  '''^[A-Z][A-Z0-9_]{3,}$''',
-  '''(?i)(thay[-_]?bang|placeholder|example|changeme|your[-_]|xxx+|\*{3,}|\.{3,}|<[^>]+>)''',
-  '''(?i)^\$\{?[A-Za-z_]''',
+  '''^(?i:argon2(id)?|bcrypt|scrypt|pbkdf2|sha(256|512)|hmac.*)$''',
+  # Tên biến môi trường, kể cả dạng gán `TEN_BIEN=` và dạng họ biến `TIEN_TO_*` (EH-AMS M13: `FIELD_SESSION_*`, `DISPLAY_NAME=`).
+  '''^[A-Z][A-Z0-9_]{3,}(=|_\*)?$''',
+  '''(?i:thay[-_]?bang|placeholder|example|changeme|your[-_]|xxx+|\*{3,}|\.{3,}|<[^>]+>)''',
+  '''^\$\{?[A-Za-z_]''',
+  # ── Bổ sung 10/11/2026 (anh Châu quyết, chat): bỏ BẮT NHẦM đã xác minh ở EHB-SM + EH-AMS (16/33 lượt CI đỏ EHB-SM, ~25/27 EH-AMS).
+  # Mỗi mẫu chỉ nhận HÌNH DẠNG không thể là mật khẩu thật: chỉ chữ (không số, không ký hiệu) theo cú pháp định danh trong mã/tệp.
+  # Tên trong mã dạng Lớp.thuộc_tính — chỉ chữ và "_" quanh dấu chấm: `Role.fieldLogin`, `AuthMethod.PASSWORD`, `app_user.status`, `khong.co.ai`.
+  '''^[A-Za-z_]+(\.[A-Za-z_]+)+$''',
+  # Tên biến/trường/kiểu camelCase, PascalCase, snake_case CHỈ CHỮ: `temporaryPassword`, `browserFlow`, `LoginChallenge`, `email_domain`.
+  # (Trước 10/11 các tên này "lọt" nhờ lỗi cờ (?i) lan — xem cảnh báo ở trên; nay ghi rõ, và có chữ số là bị bắt.)
+  '''^[A-Za-z][a-z]+([A-Z][a-z]+)+$''',
+  '''^[a-z]+(_[a-z]+)+$''',
+  # Tên tệp cấu hình/mã: `staging.env`, `compose.staging.yml`, `S1-spec.md` — đuôi tệp đã biết.
+  '''^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.(?i:env|ya?ml|json|toml|ini|conf|md|txt|sh|ts|js|mjs|rs|sql|html)$''',
+  # Địa chỉ/đầu hộp thư chữ thường (`hoadon@`, `ke.toan@ehbean.org`) — địa chỉ, không phải mật khẩu.
+  '''^[a-z][a-z0-9._-]*@(([a-z0-9-]+\.)+[a-z]{2,})?$''',
+  # Câu chỉ CHỖ CẤT bí mật: "Tệp khoá tài khoản dịch vụ: **Bitwarden**" (EHB-SM S1).
+  '''^\**(?i:bitwarden|vaultwarden)\**$''',
 ]
+
+# Tên luồng/vai/định danh dạng slug HAI từ chỉ chữ (`eh-browser`, ADR-015 EHB-SM) ở hai luật mật khẩu.
+# Cố ý hẹp hơn luật khoá (slug mọi độ dài): cụm 3+ từ hoặc có chữ số vẫn bị bắt vì có thể là mật khẩu dạng cụm từ.
+[[allowlists]]
+description = "Định danh slug hai từ chỉ chữ cạnh chữ 'mật khẩu' — tên luồng/vai, không phải mật khẩu"
+targetRules = ["vi-password-backtick", "vi-password-colon"]
+regexTarget = "secret"
+regexes = ['''^[a-z]{2,}-[a-z]{2,}$''']
+
+# curl --user lấy tài khoản từ BIẾN MÔI TRƯỜNG viết kiểu docker compose (`$$TEN:$$TEN` — `$$` là thoát của `$`).
+# Luật mặc định curl-auth-user của gitleaks đã bỏ qua `$TEN:$TEN` nhưng không hiểu `$$` ⇒ EH-AMS docker-compose.deploy.yml đỏ
+# mỗi lần tệp dời dòng (vân tay .gitleaksignore theo số dòng: 186→209→211→271→282). Chỉ nhận khi CẢ HAI vế đều là tên biến.
+[[allowlists]]
+description = "curl --user \"$$BIEN:$$BIEN\" (docker compose) — hai tên biến, không có giá trị"
+targetRules = ["curl-auth-user"]
+regexTarget = "secret"
+regexes = ['''^["']?\$\$?\{?[\p{L}_][\p{L}\p{N}_]*\}?:\$\$?\{?[\p{L}_][\p{L}\p{N}_]*\}?["']?$''']
+
+# Bài kiểm tự động: mật khẩu/AUTH_SECRET GIẢ cho database thử dựng tạm (EH-AMS *.int.spec.ts, 11 chỗ trên main 10/11/2026).
+# Cần CẢ HAI: tệp kiểm (.spec./.test./tests/) VÀ giá trị theo quy ước đặt tên giả `int-test-…`, `test-…`, `fake-…`, `dummy-…`,
+# `gia-…`, `mat-khau-…` (chữ thường, số, gạch nối). Chuỗi ngẫu nhiên trong tệp kiểm vẫn bị bắt.
+[[allowlists]]
+description = "Giá trị GIẢ theo quy ước đặt tên trong tệp kiểm tự động"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+paths = ['''(?i:\.(spec|test)\.[cm]?[jt]sx?$|(^|/)tests?/)''']
+regexes = ['''^(int-test|test|fake|dummy|gia|mat-khau)-[a-z0-9-]+$''']
+
+# Chuỗi kết nối database KHÔNG có tài khoản: `KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak` (EHB-SM compose.staging.yml,
+# 10 lượt đỏ 05–06/11 — "keycloak" chứa chữ "key"). Chỉ nhận khi cả dòng là khoá: URL gồm máy:cổng/tên — không "@", không "?".
+[[allowlists]]
+description = "URL database không có tài khoản/mật khẩu (chỉ máy, cổng, tên database)"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+regexes = ['''^\s*[A-Za-z0-9_.-]+\s*[:=]\s*["']?(jdbc:)?[a-z][a-z0-9+]*://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9_.-]*)?["']?\s*$''']
 
 # Đường dẫn bỏ qua. Mọi đường dẫn ở đây dựa trên giả định "nằm ngoài git" hoặc "là fixture cố ý";
 # cổng secret-scan tự khẳng định .env không bị git theo dõi (allowlist không có phép khẳng định là điểm mù — án lệ nội bộ).

@@ -1,0 +1,8 @@
+# Bắt nhầm đã xác minh (EHB-SM compose.staging.yml, EH-AMS docker-compose.deploy.yml) — phải XANH
+services:
+  keycloak:
+    environment:
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+  backup:
+    command: >
+      sh -c 's3() { curl -s -o /dev/null -w "%{http_code}" --user "$$S3_ACCESS_KEY:$$S3_SECRET_KEY" --aws-sigv4 "aws:amz:$$REGION:s3" https://kho.example/; }'

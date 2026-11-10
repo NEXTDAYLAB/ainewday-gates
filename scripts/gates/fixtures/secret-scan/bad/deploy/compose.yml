@@ -1,0 +1,9 @@
+# Ca ĐỎ — giá trị GIẢ, cố ý
+services:
+  backup:
+    command: >
+      sh -c 'curl -s --user "$$S3_ACCESS_KEY:Gia9KhongThat7Qz" https://kho.example/'
+  keycloak:
+    environment:
+      KC_DB_URL: jdbc:postgresql://keycloak:Gia9KhongThat7Qz@keycloak-db:5432/keycloak
+      KEYCLOAK_ADMIN_SECRET: Gia9xKhongThat7QzLm2Wp

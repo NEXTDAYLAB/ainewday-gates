@@ -76,6 +76,19 @@ if command -v gitleaks >/dev/null 2>&1; then
   ss_case "bí mật chỉ ở nhánh khác, PR sạch" khong 0 GATE_SECRET_FULL=0
   ss_case "bí mật trong commit PR (đã xoá sau)" co 1 GATE_SECRET_FULL=0
   ss_case "GATE_SECRET_FULL=1 quét mọi nhánh" khong 1 GATE_SECRET_FULL=1
+  # Từng dòng của ca đỏ phải bị bắt (10/11/2026 — gỡ bắt nhầm EHB-SM/EH-AMS: mỗi mẫu được bỏ qua có một ca đỏ CÙNG ngữ cảnh
+  # nhưng giá trị như bí mật thật; mã thoát 1 của cả thư mục không đủ chứng minh từng ca còn bị bắt).
+  bad_dir="$HERE/fixtures/secret-scan/bad"
+  found="$(cd "$bad_dir" && gitleaks dir . --config "$HERE/gitleaks.toml" --no-banner --no-color --redact -v --exit-code 0 2>&1 \
+    | tr -d '\r' | sed -n 's/^File:[[:space:]]*//p; s/^Line:[[:space:]]*/@/p' | tr '\' '/' \
+    | awk '/^@/{print f ":" substr($0, 2); next} {f=$0; sub(/^\.\//, "", f)}' | sort -u)"
+  while IFS= read -r want_line; do
+    want_line="$(printf '%s' "$want_line" | tr -d '\r')"
+    case "$want_line" in ''|'#'*) continue ;; esac
+    cases=$((cases + 1))
+    if printf '%s\n' "$found" | grep -qxF "$want_line"; then printf 'v %-24s ca đỏ %s: bị bắt\n' secret-scan "$want_line"
+    else printf 'x %-24s ca đỏ %s: KHÔNG bị bắt (luật/allowlist nới quá tay)\n' secret-scan "$want_line"; fail=1; fi
+  done < "$HERE/fixtures/secret-scan/bad.expect"
 fi
 out="$(PATH="$minpath" "$BASH" "$HERE/check-secret-scan.sh" --root "$HERE/fixtures/secret-scan/good" 2>&1)"; rc=$?
 # Phải BROKEN ĐÚNG LÝ DO (thiếu gitleaks) — không phải vì thiếu công cụ lõi hay thư viện.
