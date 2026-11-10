@@ -1,0 +1,20 @@
+# Mỗi dòng ca ĐỎ phải bị bắt riêng (test-gates.sh kiểm từng dòng, không chỉ mã thoát 1 của cả thư mục).
+# Định dạng: <tệp trong bad/>:<dòng>. Thêm ca ⇒ thêm dòng ở đây.
+so-tay-may-chu.md:3
+so-tay-may-chu.md:7
+so-tay-may-chu.md:9
+so-tay-may-chu.md:11
+bat-that.md:2
+bat-that.md:3
+bat-that.md:4
+bat-that.md:5
+bat-that.md:6
+bat-that.md:7
+bat-that.md:8
+bat-that.md:9
+bat-that.md:10
+deploy/compose.yml:5
+deploy/compose.yml:8
+deploy/compose.yml:9
+apps/api/login.int.spec.ts:2
+apps/api/login.int.spec.ts:3
