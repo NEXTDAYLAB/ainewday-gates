@@ -92,5 +92,22 @@ for kind in bad good; do
   else printf 'x %-24s %-4s mã %s, cần %s\n%s\n' run-all "$kind" "$rc" "$want" "$out"; fail=1; fi
 done
 
+# Runner: CHẶN HAY CHỈ BÁO (anh Châu quyết 10/11/2026, handbook CI.md nguyên tắc 2). Bỏ qua mọi cổng (không cần gitleaks).
+#   fixtures/run-all/chi-bao: chỉ secret-scan khai N/A; 4 cổng chỉ báo bỏ qua không khai
+#     mặc định (chỉ secret-scan chặn)        ⇒ 0 (4 cảnh báo)
+#     GATE_STRICT=1 (mọi cổng chặn)          ⇒ 1
+#     GATE_BLOCK=ui-vn-conventions           ⇒ 1 (danh sách chặn đổi được)
+#   fixtures/run-all/bad + GATE_BLOCK=""     ⇒ 0 (không cổng nào chặn)
+rc_case() { # $1 fixture, $2 mô tả, $3 mã cần, còn lại = env
+  local fx="$1" d="$2" want="$3" out rc; shift 3; cases=$((cases + 1))
+  out="$(cd "$HERE/fixtures/run-all/$fx" && env GATE_SKIP="$all" "$@" bash "$HERE/run-all.sh" 2>&1)"; rc=$?
+  if [ "$rc" -eq "$want" ]; then printf 'v %-24s %s: mã %s đúng\n' run-all "$d" "$rc"
+  else printf 'x %-24s %s: mã %s, cần %s\n%s\n' run-all "$d" "$rc" "$want" "$out"; fail=1; fi
+}
+rc_case chi-bao "cổng chỉ báo bỏ qua không khai ⇒ xanh" 0
+rc_case chi-bao "GATE_STRICT=1 ⇒ mọi cổng chặn" 1 GATE_STRICT=1
+rc_case chi-bao "GATE_BLOCK đổi danh sách chặn" 1 GATE_BLOCK=ui-vn-conventions
+rc_case bad "GATE_BLOCK rỗng ⇒ không cổng nào chặn" 0 GATE_BLOCK=
+
 echo "test-gates: $total cổng, $cases ca; $([ $fail = 0 ] && echo 'TẤT CẢ đúng (biết đỏ, biết xanh, biết BROKEN)' || echo 'CÓ CA SAI')"
 exit $fail
