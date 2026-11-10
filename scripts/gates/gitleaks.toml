@@ -120,6 +120,14 @@ targetRules = ["generic-api-key"]
 regexTarget = "line"
 regexes = ['''^\s*[A-Za-z0-9_.-]+\s*[:=]\s*["']?(jdbc:)?[a-z][a-z0-9+]*://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9_.-]*)?["']?\s*$''']
 
+# Khuôn PEM trong mã: thân khoá là CHỖ ĐIỀN của lệnh định dạng ("-----BEGIN PRIVATE KEY-----\n{}\n-----END…", %s, ${…}) —
+# khoá sinh lúc chạy, không có khoá trong tệp (EHB-SM crates/adapters/tests/gmail_service_account.rs, PR #103). Thân base64 thật vẫn bị bắt.
+[[allowlists]]
+description = "Khuôn PEM có chỗ điền định dạng thay cho thân khoá"
+targetRules = ["private-key"]
+regexTarget = "match"
+regexes = ['''^-----BEGIN[ A-Z0-9_-]*PRIVATE KEY(?: BLOCK)?-----(?:\\n|\s)*(?:\{\}|\{[0-9]+\}|%s|\$\{)''']
+
 # Đường dẫn bỏ qua. Mọi đường dẫn ở đây dựa trên giả định "nằm ngoài git" hoặc "là fixture cố ý";
 # cổng secret-scan tự khẳng định .env không bị git theo dõi (allowlist không có phép khẳng định là điểm mù — án lệ nội bộ).
 [[allowlists]]
