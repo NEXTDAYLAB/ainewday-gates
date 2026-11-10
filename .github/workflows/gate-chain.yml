@@ -7,8 +7,11 @@ name: gate-chain
 #       with:
 #         po-name: "<tên người duyệt tech stack>"   # tuỳ chọn — cổng tech-stack-approved đòi đúng tên này
 #
-# Cổng chạy: xem scripts/gates/run-all.sh (danh sách duy nhất). Mã 0 đạt · 1 vi phạm · 2 BROKEN — cả 1 và 2 đều làm job ĐỎ.
-# Thiếu công cụ / không lấy được bộ cổng ⇒ ĐỎ, không bao giờ "0 vi phạm". Không có `if:` nào bao bước chạy cổng.
+# Cổng chạy: xem scripts/gates/run-all.sh (danh sách duy nhất).
+# CHẶN HAY CHỈ BÁO (anh Châu quyết 10/11/2026, handbook standards/CI.md nguyên tắc 2): chỉ cổng trong `block` (mặc định
+# `secret-scan` — lỗi thật) làm job ĐỎ; cổng còn lại vi phạm/BROKEN ⇒ ::warning:: + tóm tắt, job XANH.
+# `strict: true` = mọi cổng chặn (hành vi cũ) — chỉ khi dự án có bằng chứng cổng đó bắt lỗi sản phẩm thật.
+# Không lấy được bộ cổng / cổng chặn thiếu công cụ ⇒ ĐỎ, không bao giờ "0 vi phạm". Không có `if:` nào bao bước chạy cổng.
 on:
   workflow_call:
     inputs:
@@ -37,9 +40,17 @@ on:
         type: string
         default: ""
       skip:
-        description: "Cổng không áp cho repo (cách nhau bởi dấu cách) — mỗi tên PHẢI có dòng N/A + lý do trong sổ cổng"
+        description: "Cổng không áp cho repo (cách nhau bởi dấu cách) — nên có dòng N/A + lý do trong sổ cổng (thiếu: cổng chặn ⇒ đỏ, cổng chỉ báo ⇒ cảnh báo)"
         type: string
         default: ""
+      block:
+        description: "Cổng làm job ĐỎ (cách nhau bởi dấu cách). Mặc định chỉ secret-scan; cổng khác chỉ báo. Rỗng = không cổng nào chặn"
+        type: string
+        default: secret-scan
+      strict:
+        description: "true = mọi cổng chặn (hành vi trước 10/11/2026)"
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -84,6 +95,8 @@ jobs:
           GATE_PITFALLS: ${{ inputs.pitfalls }}
           GATE_RUNNERS_INPUT: ${{ inputs.runners }}
           GATE_SKIP: ${{ inputs.skip }}
+          GATE_BLOCK: ${{ inputs.block }}
+          GATE_STRICT: ${{ inputs.strict }}
           GATE_PO_NAME: ${{ inputs.po-name }}
           EVENT_NAME: ${{ github.event_name }}
           PR_BASE: ${{ github.base_ref }}

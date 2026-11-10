@@ -9,6 +9,9 @@
 > (`tech-stack-approved` · `scripts-lf-executable` · `secret-scan` · `ui-vn-conventions` · `mockup-logo-goc`).
 > 8 cổng sổ sách dưới đây ghi **📚 thư viện** — script và ca kiểm âm còn giữ, **không chạy trong chuỗi**. Sổ này là thư viện tham khảo, không bắt buộc.
 
+> **10/11/2026 — chặn hay chỉ báo** *(anh Châu quyết 10/11/2026 (chat))*: trong 5 cổng, **chỉ `secret-scan` chặn** (`BLOCK_DEFAULT` trong
+> `run-all.sh`); 4 cổng kia chỉ báo (`::warning::`, job xanh). Input `block`/`strict` của `gate-chain.yml` đổi được. Handbook `standards/CI.md` nguyên tắc 2–3.
+
 ## Luật của sổ
 
 1. Cổng mới phải có dòng ở đây TRƯỚC khi merge. Tên ở đây là định danh chính thức (`scripts/gates/check-<tên>.sh`).
