@@ -18,3 +18,4 @@ deploy/compose.yml:8
 deploy/compose.yml:9
 apps/api/login.int.spec.ts:2
 apps/api/login.int.spec.ts:3
+crates/khoa_that.rs:2
