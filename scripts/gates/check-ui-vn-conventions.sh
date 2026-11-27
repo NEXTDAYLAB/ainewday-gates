@@ -7,6 +7,8 @@
 #   Luật 2  mã máy trong chữ hiện ra: chữ SNAKE_CASE viết hoa giữa thẻ (>PENDING_USE<), {x.id} {x.uuid} {x.key} {err.code}
 #           {err.name} {err.stack} hiện giữa thẻ
 #   Luật 3  giới hạn của máy: MAX_SAFE_INTEGER, MAX_VALUE, 9007199254740991 (mọi cách ngăn), 2147483647
+#   Luật 2  (máy chủ, 27/11/2026) câu người dùng đọc — chuỗi có tiếng Việt trong .sql .rs .ts .py .go… — lẫn mã nội bộ: a.b_c, ham(),
+#           ten_bien, (ten-lenh). Bỏ chú thích, dòng nhật ký (tracing/log/console/RAISE NOTICE…), thư mục test/docs. lib/loi-may-chu.awk
 #   Luật 4  ô ngày gốc: type="date|datetime-local|month|week|time"; toLocaleDateString()/toLocaleString() không tham số hoặc 'en-…';
 #           chuỗi định dạng kiểu Mỹ MM/DD/YYYY
 # Luật 5 (sửa nhanh trên dòng) KHÔNG đọc được từ mã nguồn ⇒ thành phần chung + câu hỏi Reviewer (UI_VN.md §5).
@@ -20,6 +22,7 @@
 #   Thiếu lý do ⇒ vi phạm. Mặc định toan-bo (repo mới, EHB-SM). Chế độ fixture luôn toan-bo.
 # Giới hạn (ghi trong sổ): đọc chữ trong mã, không chạy giao diện — mã máy lấy từ dữ liệu lúc chạy (key tham số từ API) chỉ bắt được bằng
 # bài e2e quét chữ trên màn (handbook templates/ui-vn/machine-codes.ts).
+UIVN_LIB="$(cd "$(dirname "$0")" && pwd)/lib"  # nhớ đường tuyệt đối TRƯỚC khi gate_init đổi thư mục (--root)
 source "$(dirname "$0")/lib/gate.sh" || exit 2  # thư viện vắng mặt ⇒ BROKEN, không chạy tiếp
 gate_init "ui-vn-conventions" "$@"
 gate_require_tool xargs; gate_require_tool comm
@@ -40,11 +43,23 @@ if [ -f .ui-vn-ignore ]; then
     gate_note "bỏ qua theo .ui-vn-ignore: $pat — $why"
   done < .ui-vn-ignore
 fi
-if [ -z "$files" ]; then
-  gate_note "không có tệp giao diện (.tsx .jsx .vue .svelte .astro .html ngoài test/build)"
+# GATE_UI_VN_CHI_MAY_CHU=1 ⇒ chỉ chạy phần câu lỗi máy chủ, bỏ luật giao diện (anh Châu quyết 27/11/2026, 2a: TERAMI + HappyLife áp riêng
+# phần câu lỗi; các luật UI khác chưa áp cho hai kho này — quyết 25/11/2026).
+[ "${GATE_UI_VN_CHI_MAY_CHU:-0}" = 1 ] && { files=""; gate_note "chế độ chỉ câu lỗi máy chủ (GATE_UI_VN_CHI_MAY_CHU=1) — bỏ luật giao diện"; }
+# Luật 2 phía máy chủ (anh Châu quyết 27/11/2026): tệp mã máy chủ / SQL có câu người dùng đọc.
+sfiles="$(gate_files | grep -E '\.(sql|rs|ts|tsx|js|mjs|py|go|kt|java|cs|php)$' \
+  | grep -vE '(^|/)(node_modules|dist|build|\.next|coverage|vendor|fixtures|__tests__|tests?|e2e|docs|\.sqlx|scripts|tooling|tools|\.claude|\.github)/' \
+  | grep -vE '(\.min\.(js|mjs)|\.(test|spec|stories|d)\.[a-z]+|_test\.(rs|go|py))$')"
+if [ -n "$sfiles" ] && [ -f .ui-vn-ignore ]; then
+  while IFS= read -r l; do l="$(printf '%s' "$l" | tr -d '\r')"; case "$l" in ''|'#'*) continue ;; esac
+    pat="$(printf '%s' "${l%%#*}" | sed -E 's/[[:space:]]+$//')"; [ -n "$pat" ] && [ "$pat" != "$l" ] && sfiles="$(printf '%s\n' "$sfiles" | grep -vE -- "$pat")"
+  done < .ui-vn-ignore
+fi
+if [ -z "$files" ] && [ -z "$sfiles" ]; then
+  gate_note "không có tệp giao diện (.tsx .jsx .vue .svelte .astro .html ngoài test/build) hay mã máy chủ"
   gate_finish
 fi
-gate_note "quét $(printf '%s\n' "$files" | wc -l | tr -d ' ') tệp giao diện"
+gate_note "quét $(printf '%s\n' "$files" | grep -c . | tr -d ' ') tệp giao diện · $(printf '%s\n' "$sfiles" | grep -c . | tr -d ' ') tệp mã máy chủ"
 
 # Mỗi luật: nhãn | biểu thức (grep -E) | áp cả tệp thành phần chung? (1 = có)
 rules="$(cat <<'EOF'
@@ -76,9 +91,9 @@ if [ "$pham_vi" = dong-moi ] && gate_repo_mode; then
     /^@@/{ split($3,a,","); st=substr(a[1],2)+0; n=(a[2]=="")?1:a[2]+0; for(i=0;i<n;i++) print f":"(st+i) }' > "$tmp/moi"
   gate_note "phạm vi dong-moi: chỉ dòng thêm/sửa so với $GATE_BASE_REF ($(wc -l < "$tmp/moi" | tr -d ' ') dòng)"
 fi
-printf '%s\n' "$files" > "$tmp/all"
+printf '%s\n' "$files" | grep . > "$tmp/all"
 # Tệp thành phần chung (bỏ luật 1, 4 cho tệp đó). Mỗi luật chạy MỘT grep trên cả danh sách (nhanh cả trên Windows).
-tr '\n' '\0' < "$tmp/all" | xargs -0 grep -l 'ui-vn: thanh-phan-chung' | LC_ALL=C sort > "$tmp/shared"
+tr '\n' '\0' < "$tmp/all" | xargs -0 -r grep -l 'ui-vn: thanh-phan-chung' | LC_ALL=C sort > "$tmp/shared"
 LC_ALL=C sort "$tmp/all" | LC_ALL=C comm -23 - "$tmp/shared" > "$tmp/plain"
 
 printf '%s\n' "$rules" | while IFS= read -r rule; do
@@ -98,9 +113,19 @@ printf '%s\n' "$rules" | while IFS= read -r rule; do
     gate_violation "$f:$line — $label: $(printf '%s' "$text" | sed -E 's/^[[:space:]]+//' | cut -c1-120)"
   done
 done
+# Luật 2 — câu người dùng đọc (lỗi, thông báo) do MÁY CHỦ soạn mà lẫn mã nội bộ (mã quyền a.b_c, tên hàm(), tên_biến, (tên-lệnh)).
+# anh Châu quyết 27/11/2026 (chat): "thông báo lỗi phải rõ nghĩa cho người dùng" — vd "mã quyền knowledge.hr_unlock chỉ cấp bằng lệnh
+# vận hành có nhật ký (cap-quyen-van-hanh)". Mã để trong nhật ký máy chủ; câu cho người đọc nói sai gì + làm gì tiếp (UI_VN luật 2, 17).
+if [ -n "$sfiles" ]; then
+  printf '%s\n' "$sfiles" | grep . | tr '\n' '\0' | LC_ALL=C xargs -0 -r awk -f "$UIVN_LIB/loi-may-chu.awk" \
+    | while IFS="$(printf '\t')" read -r f line ma cau; do
+      if [ -f "$tmp/moi" ] && ! grep -qxF -- "$f:$line" "$tmp/moi"; then echo x >> "$tmp/cu"; continue; fi
+      gate_violation "$f:$line — luật 2 — câu người dùng đọc lẫn mã nội bộ '$ma'; viết lời thường, mã để trong nhật ký: $cau"
+    done
+fi
 [ -s "$tmp/cu" ] && gate_note "nợ cũ (ngoài dòng thêm/sửa, không chặn): $(wc -l < "$tmp/cu" | tr -d ' ') chỗ"
 # ui-vn-ok: trống lý do ở BẤT KỲ dòng nào ⇒ vi phạm — ngoại lệ phải thành văn.
-tr '\n' '\0' < "$tmp/all" | xargs -0 grep -nHE 'ui-vn-ok:[[:space:]]*($|\*/|-->|[}])' 2>/dev/null | while IFS= read -r hit; do
+tr '\n' '\0' < "$tmp/all" | xargs -0 -r grep -nHE 'ui-vn-ok:[[:space:]]*($|\*/|-->|[}])' 2>/dev/null | while IFS= read -r hit; do
   f="${hit%%:*}"; rest2="${hit#*:}"
   gate_violation "$f:${rest2%%:*} — ui-vn-ok: thiếu lý do"
 done

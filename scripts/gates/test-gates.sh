@@ -50,6 +50,19 @@ for s in "$HERE"/check-*.sh; do
 done
 
 # BROKEN: thiếu công cụ ngoài (gitleaks) ⇒ 2. PATH tối thiểu chỉ có công cụ lõi, KHÔNG có gitleaks.
+# ui-vn-conventions · luật 2 phía máy chủ (anh Châu quyết 27/11/2026): bad PHẢI bắt đủ 4 câu lộ mã ở server/, good KHÔNG báo câu nào.
+cases=$((cases + 1))
+nb="$(bash "$HERE/check-ui-vn-conventions.sh" --root "$HERE/fixtures/ui-vn-conventions/bad" 2>&1 | grep -c 'server/.*mã nội bộ')"
+ng="$(bash "$HERE/check-ui-vn-conventions.sh" --root "$HERE/fixtures/ui-vn-conventions/good" 2>&1 | grep -c 'mã nội bộ')"
+if [ "$nb" = 4 ] && [ "$ng" = 0 ]; then printf 'v %-24s luật 2 máy chủ: bad bắt 4/4, good 0 báo nhầm\n' ui-vn-conventions
+else printf 'x %-24s luật 2 máy chủ: bad bắt %s (cần 4), good báo %s (cần 0)\n' ui-vn-conventions "$nb" "$ng"; fail=1; fi
+
+cases=$((cases + 1))
+nm="$(GATE_UI_VN_CHI_MAY_CHU=1 bash "$HERE/check-ui-vn-conventions.sh" --root "$HERE/fixtures/ui-vn-conventions/bad" 2>&1)"
+if [ "$(printf '%s\n' "$nm" | grep -c 'mã nội bộ')" = 4 ] && ! printf '%s\n' "$nm" | grep -qE 'luật [134] '; then
+  printf 'v %-24s GATE_UI_VN_CHI_MAY_CHU=1: chỉ câu lỗi máy chủ (4/4), không luật giao diện\n' ui-vn-conventions
+else printf 'x %-24s GATE_UI_VN_CHI_MAY_CHU=1 sai\n%s\n' ui-vn-conventions "$nm"; fail=1; fi
+
 minpath="$(mktemp -d)"
 for c in bash dirname basename tail head cat grep sed awk gawk mawk find sort uniq wc cut tr ls rm mktemp git printf env true false date pwd; do
   p="$(command -v "$c" 2>/dev/null)" || continue
